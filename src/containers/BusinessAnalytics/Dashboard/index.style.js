@@ -8,6 +8,7 @@ export const StyledDashboard = styled('div')`
     box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.1);
     padding: 25px;
   }
+
   .text-field {
     background-color: white;
     height: fit-content;
