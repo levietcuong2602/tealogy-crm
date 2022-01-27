@@ -4,9 +4,28 @@ import { COLOR } from '@src/styles/color';
 export const StyledDashboard = styled('div')`
   .header {
     background: #fff;
-    border-radius: ${COLOR.primary};
     box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.1);
     padding: 25px;
+    border-radius: 6px;
+
+    .overview-item {
+      border-radius: 20px;
+      padding: 10px 20px;
+      min-width: 150px;
+      background-color: ${COLOR.light};
+
+      .percent-growth-increment {
+        color: green;
+      }
+    }
+  }
+
+  .main-item {
+    background: #fff;
+    box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    padding: 25px;
+    margin-top: 10px;
   }
 
   .text-field {
