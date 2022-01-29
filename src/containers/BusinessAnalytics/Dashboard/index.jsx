@@ -1,13 +1,20 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
+import * as React from 'react';
+import {
+  Box,
+  Grid,
+  Typography,
+  CircularProgress,
+  TextField,
+} from '@mui/material';
+import DatePicker from '@mui/lab/DatePicker';
+import AdapterDateFns from '@mui/lab/AdapterDateFns';
+import LocalizationProvider from '@mui/lab/LocalizationProvider';
 
 import apis from '@src/apis';
+import { usePagination } from '@src/hooks';
 import StackedAreaChart from '@src/components/Charts/StackedAreaChart';
 import CustomTable from '@src/components/CustomTable';
-import { usePagination } from '@src/hooks';
+// import CustomDatePicker from '@src/components/CustomDatePicker';
 
 import { StyledDashboard, StyledTopSellingProductTable } from './index.style';
 
@@ -32,6 +39,14 @@ const Dashboard = () => {
     onChangePage(page);
   };
 
+  // const { addParams, removeParams } = useSearchParams();
+  // const location = useLocation();
+  // const history = useHistory();
+  // const [filter, setFilter] = useState({
+  //   date: moment(new Date()).format(),
+  // });
+  const [dateValue, setDateValue] = React.useState(new Date());
+
   const heads = [
     {
       label: 'Drink Item',
@@ -52,6 +67,30 @@ const Dashboard = () => {
 
   return (
     <StyledDashboard>
+      <Grid
+        className="header"
+        container
+        display="flex"
+        justifyContent="flex-end"
+      >
+        <Box display="flex" alignItems="flex-end">
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              openTo="year"
+              views={['year', 'month']}
+              minDate={new Date('2012-03-01')}
+              maxDate={new Date('2023-06-01')}
+              value={dateValue}
+              onChange={(newValue) => {
+                setDateValue(newValue);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} helperText={null} />
+              )}
+            />
+          </LocalizationProvider>
+        </Box>
+      </Grid>
       <div className="header">
         <Grid
           justifyContent="space-between"
