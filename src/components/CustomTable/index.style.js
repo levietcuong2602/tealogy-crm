@@ -7,7 +7,7 @@ export const StyledTableCell = styled(TableCell)`
     background-color: #f6f9fc;
     font-weight: 600;
     font-size: 15px;
-    text-transform: uppercase;
+    // text-transform: uppercase;
     color: ${COLOR.bodyText};
     border: ${(props) =>
       props.border ? '1px solid rgba(224, 224, 224, 1)' : 'none'};
