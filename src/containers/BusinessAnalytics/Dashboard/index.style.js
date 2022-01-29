@@ -9,6 +9,7 @@ export const StyledDashboard = styled('div')`
     padding: 25px;
     border-radius: 6px;
     flex-wrap: wrap;
+    margin-top: 10px;
 
     .overview-item {
       border-radius: 20px;
@@ -44,30 +45,26 @@ export const StyledDashboard = styled('div')`
     font-weight: 600;
     text-decoration: underline;
   }
+`;
 
-  .text-field {
-    background-color: white;
-    height: fit-content;
-    width: 420px;
-    margin-right: 20px;
-    margin-top: 8px;
-    border-radius: 20px;
-
-    .MuiInputBase-root {
-      border-radius: 20px;
-      input {
-        font-size: 14px;
-      }
-    }
-    .MuiInputBase-input {
-      padding-top: 10.5px;
-      padding-bottom: 10.5px;
-    }
-    .MuiInputLabel-root {
-      font-size: 14px;
-      font-weight: 500;
-      color: ${COLOR.bodyText};
-    }
+export const StyledDatePicker = styled('div')`
+  .MuiTypography-root {
+    flex: 1 0 33.33%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: unset;
+    background-color: transparent;
+    border: 0px;
+    outline: 0px;
+    font-weight: 400;
+    font-size: 1rem;
+    line-height: 1.75;
+    letter-spacing: 0.00938em;
+    margin: 8px 0px;
+    height: 36px;
+    border-radius: 18px;
+    cursor: pointer;
   }
 `;
 
