@@ -210,7 +210,7 @@ const MultiLevel = ({
 const MenuItem = ({
   item,
   mobile,
-  collapsed,
+  collapsed = false,
   onItemClick,
   selectedKeys,
   level = 0,
@@ -230,7 +230,7 @@ const MenuItem = ({
 };
 
 export default function Sidebar(props) {
-  const { collapsed, toggle } = props;
+  const { collapsed = false, toggle } = props;
   const [selectedKeys, setSelectedKeys] = useState([]);
 
   const { pathname } = useLocation();
@@ -283,7 +283,7 @@ export default function Sidebar(props) {
         <Toolbar className={`toolbar ${collapsed && 'toolbar-collapsed'} }`}>
           <img
             className={`logo ${collapsed && 'hide'} }`}
-            src="/img/logo.svg"
+            src="/img/logo-3.svg"
             alt="logo"
             onClick={() => {
               window.location.href = AICC_URL;

@@ -150,7 +150,11 @@ const CustomTable = ({
                   {heads.map((head) => {
                     if (item.id === 'totalRow') {
                       return (
-                        <TableCell className="table-cell" align={head.align}>
+                        <TableCell
+                          className="table-cell"
+                          align={head.align}
+                          key={head.valueName}
+                        >
                           {head.valueName !== 'actions' &&
                           head.valueName !== 'no' &&
                           (item[head.valueName] || item[head.valueName] === 0)
