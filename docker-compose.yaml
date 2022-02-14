@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  teaology-crm:
+    container_name: teaology-crm
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 3000:3000
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+      - PORT=3000
+      - NODE_ENV=production
