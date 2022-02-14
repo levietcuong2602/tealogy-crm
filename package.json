@@ -1,5 +1,5 @@
 {
-  "name": "aicc-v3",
+  "name": "teaology-crm",
   "version": "1.0.0",
   "scripts": {
     "start": "react-app-rewired start",
