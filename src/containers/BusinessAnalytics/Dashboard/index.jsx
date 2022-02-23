@@ -1,4 +1,6 @@
-import * as React from 'react';
+import React, { useState } from 'react';
+import moment from 'moment';
+import { useSnackbar } from 'notistack';
 import {
   Box,
   Grid,
@@ -14,16 +16,12 @@ import apis from '@src/apis';
 import { usePagination } from '@src/hooks';
 import StackedAreaChart from '@src/components/Charts/StackedAreaChart';
 import CustomTable from '@src/components/CustomTable';
-// import CustomDatePicker from '@src/components/CustomDatePicker';
+
+import { getDiffBetweenTwoDate } from '@src/utils/date';
 
 import { StyledDashboard, StyledTopSellingProductTable } from './index.style';
 
-import {
-  overviews,
-  revenueData,
-  revenueCategories,
-  topSellingProducts,
-} from './data';
+import { overviews, topSellingProducts } from './data';
 
 const Dashboard = () => {
   const {
@@ -34,18 +32,16 @@ const Dashboard = () => {
     onChangePage,
     loading: loadingTopSelling,
   } = usePagination([], apis.hotline.getListHotlines, ['tab']);
+  const { enqueueSnackbar } = useSnackbar();
 
   const handleChangePagination = (page) => {
     onChangePage(page);
   };
-
-  // const { addParams, removeParams } = useSearchParams();
-  // const location = useLocation();
-  // const history = useHistory();
-  // const [filter, setFilter] = useState({
-  //   date: moment(new Date()).format(),
-  // });
-  const [dateValue, setDateValue] = React.useState(new Date());
+  const [dateMonth, setDateMonth] = React.useState(new Date());
+  const [listShops, setListShops] = useState([]);
+  const [statisticsRevenueData, setStatisticsRevenueData] = useState([]);
+  const [stackedChartSeries, setStackedChartSeries] = useState([]);
+  const [stackedChartCategories, setStackedChartCategories] = useState([]);
 
   const heads = [
     {
@@ -65,6 +61,98 @@ const Dashboard = () => {
     },
   ];
 
+  const getListShops = async () => {
+    try {
+      const { status, results } = await apis.shop.getListShops({
+        pageSize: 100,
+      });
+      if (status === 1) {
+        setListShops(results.data);
+      }
+    } catch (error) {
+      enqueueSnackbar(error.message, {
+        variant: 'error',
+      });
+    }
+  };
+
+  const getStatisticsRevenues = async (startTime, endTime) => {
+    try {
+      const { status, results } = await apis.item.getStatisticsRevenue({
+        startTime,
+        endTime,
+      });
+      if (status === 1) {
+        setStatisticsRevenueData(results);
+      }
+    } catch (error) {
+      enqueueSnackbar(error.message, {
+        variant: 'error',
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    const startTime = moment(dateMonth).startOf('month').valueOf();
+    const endTime = moment(dateMonth).endOf('month').valueOf();
+    getListShops();
+    getStatisticsRevenues(startTime, endTime);
+  }, [dateMonth]);
+
+  const handleStatisticsRevenue = () => {
+    const startTime = moment(dateMonth).startOf('month').valueOf();
+    const endTime = moment(dateMonth).endOf('month').valueOf();
+
+    const revenueDataObj = {};
+    statisticsRevenueData.forEach(({ date, shopId, totalRevenue }) => {
+      if (!revenueDataObj[date]) revenueDataObj[date] = {};
+
+      revenueDataObj[date][shopId] = totalRevenue;
+    });
+
+    const shopDataObj = {};
+    listShops.forEach(({ id, name }) => {
+      shopDataObj[id] = {
+        name,
+        data: [],
+      };
+    });
+
+    // Difference in number of days
+    const durationDays = getDiffBetweenTwoDate({
+      start: startTime,
+      end: endTime,
+      unitOfTime: 'days',
+    });
+    const categories = [];
+
+    // eslint-disable-next-line no-plusplus
+    for (let i = 0; i <= durationDays; i++) {
+      const day = moment(startTime).add(i, 'days').format('YYYY-MM-DD');
+      categories.push(day);
+
+      let revenueShopsInDate = {};
+      if (revenueDataObj[day]) revenueShopsInDate = revenueDataObj[day];
+
+      Object.keys(shopDataObj).forEach((shopId) => {
+        let value = 0;
+        if (revenueShopsInDate[shopId]) value = revenueShopsInDate[shopId];
+
+        shopDataObj[shopId].data.push(value);
+      });
+    }
+
+    const series = Object.values(shopDataObj);
+
+    setStackedChartSeries(series);
+    setStackedChartCategories(stackedChartCategories);
+  };
+  React.useEffect(() => {
+    if (listShops.length > 0) {
+      handleStatisticsRevenue();
+    }
+  }, [listShops, statisticsRevenueData]);
+
   return (
     <StyledDashboard>
       <Grid
@@ -80,9 +168,9 @@ const Dashboard = () => {
               views={['year', 'month']}
               minDate={new Date('2012-03-01')}
               maxDate={new Date('2023-06-01')}
-              value={dateValue}
+              value={dateMonth}
               onChange={(newValue) => {
-                setDateValue(newValue);
+                setDateMonth(newValue);
               }}
               renderInput={(params) => (
                 <TextField {...params} helperText={null} />
@@ -117,8 +205,8 @@ const Dashboard = () => {
           <div className="revenue-order">
             <Typography className="text title">Revenue</Typography>
             <StackedAreaChart
-              series={revenueData}
-              categories={revenueCategories}
+              series={stackedChartSeries}
+              categories={stackedChartCategories}
             />
           </div>
         </Grid>

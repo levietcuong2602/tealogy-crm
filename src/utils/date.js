@@ -19,4 +19,12 @@ const getDatesBetweenTwoDates = (
   return dates;
 };
 
-module.exports = { getDatesBetweenTwoDates };
+const getDiffBetweenTwoDate = ({ start, end, unitOfTime = 'days' }) => {
+  const from = moment(start);
+  const to = moment(end);
+  // Difference in number of days
+  const durationDays = to.diff(from, unitOfTime);
+  return durationDays;
+};
+
+module.exports = { getDatesBetweenTwoDates, getDiffBetweenTwoDate };

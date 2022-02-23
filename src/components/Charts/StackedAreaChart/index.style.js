@@ -36,6 +36,8 @@ export const StyledStackedAreaChart = styled('div')`
     display: flex;
     justify-content: flex-end;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
   }
 
   .legend-item {
