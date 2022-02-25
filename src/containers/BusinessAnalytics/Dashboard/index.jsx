@@ -18,10 +18,9 @@ import StackedAreaChart from '@src/components/Charts/StackedAreaChart';
 import CustomTable from '@src/components/CustomTable';
 
 import { getDiffBetweenTwoDate } from '@src/utils/date';
+import { formatNumber } from '@src/utils/formatNumber';
 
 import { StyledDashboard, StyledTopSellingProductTable } from './index.style';
-
-import { overviews, topSellingProducts } from './data';
 
 const Dashboard = () => {
   const {
@@ -42,21 +41,23 @@ const Dashboard = () => {
   const [statisticsRevenueData, setStatisticsRevenueData] = useState([]);
   const [stackedChartSeries, setStackedChartSeries] = useState([]);
   const [stackedChartCategories, setStackedChartCategories] = useState([]);
+  const [topSellingProducts, setTopSellingProducts] = useState([]);
+  const [overviewData, setOverviewData] = useState([]);
 
   const heads = [
     {
       label: 'Drink Item',
-      valueName: 'drinkItem',
+      valueName: 'productName',
       align: 'left',
     },
     {
       label: 'Qty.Cups',
-      valueName: 'quantity',
+      valueName: 'totalQuantity',
       align: 'left',
     },
     {
       label: 'Total Revenue',
-      valueName: 'totalRevenue',
+      valueName: 'totalRetailPrice',
       align: 'left',
     },
   ];
@@ -92,11 +93,88 @@ const Dashboard = () => {
     }
   };
 
+  const getTopSellingProducts = async (startTime, endTime) => {
+    try {
+      const { status, results } = await apis.item.getTopSellingProducts({
+        startTime,
+        endTime,
+      });
+      if (status === 1) {
+        setTopSellingProducts(results.data);
+      }
+    } catch (error) {
+      enqueueSnackbar(error.message, {
+        variant: 'error',
+      });
+    }
+  };
+
+  const getOverviewItems = async (startTime, endTime) => {
+    try {
+      const { status, results } = await apis.item.getOverviewItems({
+        startTime,
+        endTime,
+      });
+      if (status === 1) {
+        const OVERVIEW_MAPPING = {
+          totalRevenues: {
+            id: 1,
+            name: 'Revenue',
+            value: '',
+            percentGrowth: '',
+          },
+          totalQuantities: {
+            id: 2,
+            name: 'Total Cups',
+            value: '',
+            percentGrowth: '',
+          },
+          totalNumberOrders: {
+            id: 3,
+            name: 'Number Orders',
+            value: '',
+            percentGrowth: '',
+          },
+          totalCustomers: {
+            id: 4,
+            name: 'Total Customers',
+            value: '1',
+            percentGrowth: 100,
+          },
+          totalNewCustomer: {
+            id: 5,
+            name: 'New Customers',
+            value: '1',
+            percentGrowth: 100,
+          },
+        };
+        const { currentPeriod, beforePeriod } = results;
+        Object.keys(currentPeriod).forEach((key) => {
+          const currentValue = currentPeriod[key] || 0;
+          const beforeValue = beforePeriod[key] || 0;
+
+          OVERVIEW_MAPPING[key].value = currentValue;
+          OVERVIEW_MAPPING[key].percentGrowth = beforeValue
+            ? (((currentValue - beforeValue) * 100) / beforeValue).toFixed(2)
+            : 0;
+        });
+        setOverviewData(Object.values(OVERVIEW_MAPPING));
+      }
+    } catch (error) {
+      enqueueSnackbar(error.message, {
+        variant: 'error',
+      });
+    }
+  };
+
   React.useEffect(() => {
     const startTime = moment(dateMonth).startOf('month').valueOf();
     const endTime = moment(dateMonth).endOf('month').valueOf();
+
     getListShops();
+    getTopSellingProducts(startTime, endTime);
     getStatisticsRevenues(startTime, endTime);
+    getOverviewItems(startTime, endTime);
   }, [dateMonth]);
 
   const handleStatisticsRevenue = () => {
@@ -145,8 +223,9 @@ const Dashboard = () => {
     const series = Object.values(shopDataObj);
 
     setStackedChartSeries(series);
-    setStackedChartCategories(stackedChartCategories);
+    setStackedChartCategories(categories);
   };
+
   React.useEffect(() => {
     if (listShops.length > 0) {
       handleStatisticsRevenue();
@@ -186,21 +265,23 @@ const Dashboard = () => {
           display="flex"
           flexWrap="wrap"
         >
-          {overviews.map((item) => (
+          {overviewData.map((item) => (
             <Box className="overview-item" key={item.name}>
               <Typography className="text">{item.name}</Typography>
               <Typography className="text" variant="h4" fontWeight="500">
-                {item.value}
+                {formatNumber(item.value)}
               </Typography>
               <Typography className="text percent-growth-increment">
-                {item.percentGrowth > 0 ? '+' : '-'}
-                {item.percentGrowth}%
+                <span>
+                  {item.percentGrowth > 0 ? '+' : ''}
+                  {item.percentGrowth}%
+                </span>
               </Typography>
             </Box>
           ))}
         </Grid>
       </div>
-      <Grid container spacing={2}>
+      <Grid className="revenue-container" container spacing={2}>
         <Grid item xs={12} sm={12} md={6} lg={8}>
           <div className="revenue-order">
             <Typography className="text title">Revenue</Typography>
