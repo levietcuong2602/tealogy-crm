@@ -24,6 +24,12 @@ export const StyledDashboard = styled('div')`
     }
   }
 
+  .revenue-container {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
   .revenue-order {
     background: #fff;
     box-shadow: 0px 4px 24px rgba(0, 0, 0, 0.1);
