@@ -6,7 +6,7 @@ import getErrorMessage from '@src/errors/getErrorMessage';
 const axiosClient = axios.create({
   baseURL: `${API_URL}/api/v1`,
   responseType: 'json',
-  timeout: 15 * 1000,
+  timeout: 30 * 1000,
 });
 
 axiosClient.interceptors.request.use(
