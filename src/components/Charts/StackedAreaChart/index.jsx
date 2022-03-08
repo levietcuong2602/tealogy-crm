@@ -1,3 +1,4 @@
+/* eslint-disable react/no-array-index-key */
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { Button, Typography } from '@mui/material';
 import Highcharts from 'highcharts';

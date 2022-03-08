@@ -1,3 +1,4 @@
+import { MenuItem } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { COLOR } from '@src/styles/color';
 import { BORDER_RADIUS } from '@src/styles/config';
@@ -22,6 +23,13 @@ export const StyledDashboard = styled('div')`
         color: green;
       }
     }
+  }
+  .text-field {
+    background-color: #fff;
+    width: 200px;
+    height: fit-content;
+    border-radius: ${BORDER_RADIUS};
+    margin-right: 10px;
   }
 
   .revenue-container {
@@ -134,6 +142,27 @@ export const StyledTopSellingProductTable = styled('div')`
     .Mui-selected {
       font-weight: bold;
       color: ${COLOR.white};
+    }
+  }
+`;
+
+export const StyledMenuItem = styled(MenuItem)`
+  &.MuiMenuItem-root {
+    font-weight: 500;
+    &:focus {
+      color: #fff;
+      background-color: ${COLOR.primary};
+      &:hover {
+        background-color: ${COLOR.primary};
+        color: #fff;
+      }
+    }
+    &:hover {
+      background-color: rgba(252, 102, 52, 0.12);
+      &.MuiListItemIcon-root,
+      &.MuiListItemText-primary {
+        color: #fff;
+      }
     }
   }
 `;

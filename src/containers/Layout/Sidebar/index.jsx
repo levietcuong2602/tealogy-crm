@@ -1,4 +1,5 @@
 /* eslint-disable import/no-unresolved */
+/* eslint-disable react/no-array-index-key */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useHistory, matchPath } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';

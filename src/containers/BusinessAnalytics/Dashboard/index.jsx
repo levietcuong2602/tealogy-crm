@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import { useSnackbar } from 'notistack';
+import queryString from 'query-string';
+import { useLocation, useHistory } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -8,41 +10,100 @@ import {
   CircularProgress,
   TextField,
 } from '@mui/material';
-import DatePicker from '@mui/lab/DatePicker';
-import AdapterDateFns from '@mui/lab/AdapterDateFns';
-import LocalizationProvider from '@mui/lab/LocalizationProvider';
 
 import apis from '@src/apis';
-import { usePagination } from '@src/hooks';
+import { useSearchParams, useCallApi } from '@src/hooks';
 import StackedAreaChart from '@src/components/Charts/StackedAreaChart';
 import CustomTable from '@src/components/CustomTable';
+import CustomDatePickerRange from '@src/components/CustomDatePickerRange';
 
 import { getDiffBetweenTwoDate } from '@src/utils/date';
 import { formatNumber } from '@src/utils/formatNumber';
 
-import { StyledDashboard, StyledTopSellingProductTable } from './index.style';
+import { ALL, DATE_TIME_PICKER_TYPES } from '@src/constants';
+
+import {
+  StyledDashboard,
+  StyledTopSellingProductTable,
+  StyledMenuItem,
+} from './index.style';
 
 const Dashboard = () => {
+  const { data: listShops, apiCaller: fetchListShops } = useCallApi(
+    [],
+    apis.shop.getListShops,
+  );
   const {
-    // data: productList,
-    currentPage,
-    currentSize,
-    total,
-    onChangePage,
+    data: topSellingProducts,
+    apiCaller: fetchTopSellingProducts,
     loading: loadingTopSelling,
-  } = usePagination([], apis.hotline.getListHotlines, ['tab']);
-  const { enqueueSnackbar } = useSnackbar();
+  } = useCallApi([], apis.item.getTopSellingProducts);
 
-  const handleChangePagination = (page) => {
-    onChangePage(page);
-  };
-  const [dateMonth, setDateMonth] = React.useState(new Date());
-  const [listShops, setListShops] = useState([]);
+  const { enqueueSnackbar } = useSnackbar();
+  const location = useLocation();
+  const history = useHistory();
+  const { addParams } = useSearchParams();
+
+  const [dateMonth] = React.useState(new Date());
   const [statisticsRevenueData, setStatisticsRevenueData] = useState([]);
   const [stackedChartSeries, setStackedChartSeries] = useState([]);
   const [stackedChartCategories, setStackedChartCategories] = useState([]);
-  const [topSellingProducts, setTopSellingProducts] = useState([]);
   const [overviewData, setOverviewData] = useState([]);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+
+  const [filter, setFilter] = useState({
+    shopId: null,
+    startDate: moment().startOf('month'),
+    endDate: moment().endOf('month'),
+  });
+
+  useEffect(() => {
+    const searchParams = queryString.parse(location.search);
+    const {
+      shopId,
+      startTime = moment().startOf('month').valueOf(),
+      endTime = moment().endOf('month').valueOf(),
+    } = searchParams;
+
+    setFilter((prevState) => ({
+      ...prevState,
+      shopId,
+      startDate: new Date(Number.parseInt(startTime, 10)),
+      endDate: new Date(Number.parseInt(endTime, 10)),
+    }));
+  }, [location.search]);
+
+  const handleChangeStartDate = (startDate) => {
+    const startTime = new Date(moment(startDate).startOf('minute')).getTime();
+    addParams({ startTime, page: 1 });
+    setFilter({
+      ...filter,
+      startDate,
+    });
+  };
+
+  const handleChangeEndDate = (endDate) => {
+    const endTime = new Date(moment(endDate).endOf('minute')).getTime();
+    addParams({ endTime, page: 1 });
+    setFilter({
+      ...filter,
+      endDate,
+    });
+  };
+
+  const handleRefresh = () => {
+    history.replace({ search: '' });
+    setFilter({
+      startDate: moment().startOf('month'),
+      endDate: moment().endOf('month'),
+    });
+  };
+
+  const handleChangeShop = (e) => {
+    const shopId = e.target.value;
+    addParams({ shopId, page: 1 });
+    setFilter({ ...filter, shopId });
+  };
 
   const heads = [
     {
@@ -62,21 +123,6 @@ const Dashboard = () => {
     },
   ];
 
-  const getListShops = async () => {
-    try {
-      const { status, results } = await apis.shop.getListShops({
-        pageSize: 100,
-      });
-      if (status === 1) {
-        setListShops(results.data);
-      }
-    } catch (error) {
-      enqueueSnackbar(error.message, {
-        variant: 'error',
-      });
-    }
-  };
-
   const getStatisticsRevenues = async (startTime, endTime) => {
     try {
       const { status, results } = await apis.item.getStatisticsRevenue({
@@ -93,24 +139,9 @@ const Dashboard = () => {
     }
   };
 
-  const getTopSellingProducts = async (startTime, endTime) => {
-    try {
-      const { status, results } = await apis.item.getTopSellingProducts({
-        startTime,
-        endTime,
-      });
-      if (status === 1) {
-        setTopSellingProducts(results.data);
-      }
-    } catch (error) {
-      enqueueSnackbar(error.message, {
-        variant: 'error',
-      });
-    }
-  };
-
   const getOverviewItems = async (startTime, endTime) => {
     try {
+      setLoadingOverview(true);
       const { status, results } = await apis.item.getOverviewItems({
         startTime,
         endTime,
@@ -165,17 +196,25 @@ const Dashboard = () => {
         variant: 'error',
       });
     }
+
+    setLoadingOverview(false);
   };
 
   React.useEffect(() => {
-    const startTime = moment(dateMonth).startOf('month').valueOf();
-    const endTime = moment(dateMonth).endOf('month').valueOf();
+    const { startDate, endDate } = filter;
+    const startTime = moment(startDate).startOf('month').valueOf();
+    const endTime = moment(endDate).endOf('month').valueOf();
 
-    getListShops();
-    getTopSellingProducts(startTime, endTime);
-    getStatisticsRevenues(startTime, endTime);
+    fetchListShops({
+      pageSize: 100,
+    });
+    fetchTopSellingProducts({
+      startTime,
+      endTime,
+    });
     getOverviewItems(startTime, endTime);
-  }, [dateMonth]);
+    getStatisticsRevenues(startTime, endTime);
+  }, [filter, filter.shopId, filter.startDate, filter.endDate]);
 
   const handleStatisticsRevenue = () => {
     const startTime = moment(dateMonth).startOf('month').valueOf();
@@ -241,21 +280,33 @@ const Dashboard = () => {
         justifyContent="flex-end"
       >
         <Box display="flex" alignItems="flex-end">
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              openTo="year"
-              views={['year', 'month']}
-              minDate={new Date('2012-03-01')}
-              maxDate={new Date('2023-06-01')}
-              value={dateMonth}
-              onChange={(newValue) => {
-                setDateMonth(newValue);
-              }}
-              renderInput={(params) => (
-                <TextField {...params} helperText={null} />
-              )}
-            />
-          </LocalizationProvider>
+          <TextField
+            size="small"
+            className="text-field"
+            variant="outlined"
+            value={filter.shopId}
+            select
+            label="Shops"
+            onChange={handleChangeShop}
+          >
+            <StyledMenuItem value={ALL}>All Shops</StyledMenuItem>
+            {listShops.map((item) => (
+              <StyledMenuItem key={item.id} value={item.id}>
+                {item.name}
+              </StyledMenuItem>
+            ))}
+          </TextField>
+        </Box>
+        <Box display="flex" alignItems="flex-end">
+          <CustomDatePickerRange
+            type={DATE_TIME_PICKER_TYPES.DATE_TIME}
+            isRefresh
+            startDate={filter.startDate}
+            endDate={filter.endDate}
+            handleChangeStartDate={handleChangeStartDate}
+            handleChangeEndDate={handleChangeEndDate}
+            handleRefresh={handleRefresh}
+          />
         </Box>
       </Grid>
       <div className="header">
@@ -265,20 +316,26 @@ const Dashboard = () => {
           display="flex"
           flexWrap="wrap"
         >
-          {overviewData.map((item) => (
-            <Box className="overview-item" key={item.name}>
-              <Typography className="text">{item.name}</Typography>
-              <Typography className="text" variant="h4" fontWeight="500">
-                {formatNumber(item.value)}
-              </Typography>
-              <Typography className="text percent-growth-increment">
-                <span>
-                  {item.percentGrowth > 0 ? '+' : ''}
-                  {item.percentGrowth}%
-                </span>
-              </Typography>
+          {loadingOverview ? (
+            <Box display="flex" justifyContent="center">
+              <CircularProgress color="primary" />
             </Box>
-          ))}
+          ) : (
+            overviewData.map((item) => (
+              <Box className="overview-item" key={item.name}>
+                <Typography className="text">{item.name}</Typography>
+                <Typography className="text" variant="h4" fontWeight="500">
+                  {formatNumber(item.value)}
+                </Typography>
+                <Typography className="text percent-growth-increment">
+                  <span>
+                    {item.percentGrowth > 0 ? '+' : ''}
+                    {item.percentGrowth}%
+                  </span>
+                </Typography>
+              </Box>
+            ))
+          )}
         </Grid>
       </div>
       <Grid className="revenue-container" container spacing={2}>
@@ -306,12 +363,11 @@ const Dashboard = () => {
                   items={topSellingProducts}
                   heads={heads}
                   pagination={{
-                    page: currentPage,
-                    limit: currentSize,
-                    total,
-                    totalPages: Math.ceil(total / currentSize, 10),
+                    page: 0,
+                    limit: 10,
+                    total: 10,
+                    totalPages: 1,
                   }}
-                  onChangePagination={handleChangePagination}
                 />
               </StyledTopSellingProductTable>
             )}
