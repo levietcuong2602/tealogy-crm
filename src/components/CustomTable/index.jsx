@@ -175,6 +175,7 @@ const CustomTable = ({
                               className="icon-button"
                               onClick={() => action.onClick(item)}
                               disabled={action.disable}
+                              key={action.icon}
                             >
                               {typeof action.icon === 'function'
                                 ? action.icon(item)

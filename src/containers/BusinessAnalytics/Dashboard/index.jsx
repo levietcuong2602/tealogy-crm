@@ -2,25 +2,25 @@ import React, { useState, useEffect } from 'react';
 import moment from 'moment';
 import { useSnackbar } from 'notistack';
 import queryString from 'query-string';
-import { useLocation, useHistory } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Grid,
   Typography,
   CircularProgress,
   TextField,
+  Tooltip,
 } from '@mui/material';
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
 
 import apis from '@src/apis';
 import { useSearchParams, useCallApi } from '@src/hooks';
 import StackedAreaChart from '@src/components/Charts/StackedAreaChart';
 import CustomTable from '@src/components/CustomTable';
-import CustomDatePickerRange from '@src/components/CustomDatePickerRange';
+import CustomDateRangePickerDay from '@src/components/CustomDateRangePickerDay';
 
 import { getDiffBetweenTwoDate } from '@src/utils/date';
 import { formatNumber } from '@src/utils/formatNumber';
-
-import { ALL, DATE_TIME_PICKER_TYPES } from '@src/constants';
 
 import {
   StyledDashboard,
@@ -41,69 +41,81 @@ const Dashboard = () => {
 
   const { enqueueSnackbar } = useSnackbar();
   const location = useLocation();
-  const history = useHistory();
-  const { addParams } = useSearchParams();
 
-  const [dateMonth] = React.useState(new Date());
+  const { addParams, removeParams } = useSearchParams();
+
   const [statisticsRevenueData, setStatisticsRevenueData] = useState([]);
   const [stackedChartSeries, setStackedChartSeries] = useState([]);
   const [stackedChartCategories, setStackedChartCategories] = useState([]);
   const [overviewData, setOverviewData] = useState([]);
   const [loadingOverview, setLoadingOverview] = useState(true);
-
-  const [filter, setFilter] = useState({
-    shopId: null,
-    startDate: moment().startOf('month'),
-    endDate: moment().endOf('month'),
-  });
+  const [loadingChartRevenue, setLoadingChartRevenue] = useState(false);
+  const [dateRange, setDateRange] = React.useState([
+    moment().startOf('month'),
+    moment().endOf('month'),
+  ]);
+  const [shopIdFilter, setShopIdFilter] = useState(null);
+  const [shopSelect, setShopSelect] = useState(null);
 
   useEffect(() => {
     const searchParams = queryString.parse(location.search);
     const {
       shopId,
-      startTime = moment().startOf('month').valueOf(),
-      endTime = moment().endOf('month').valueOf(),
+      startDate: startDateFromUrl = moment().startOf('month'),
+      endDate: endDateFromUrl = moment().endOf('month'),
     } = searchParams;
+    const [startDateValue, endDateValue] = dateRange;
 
-    setFilter((prevState) => ({
-      ...prevState,
-      shopId,
-      startDate: new Date(Number.parseInt(startTime, 10)),
-      endDate: new Date(Number.parseInt(endTime, 10)),
-    }));
+    if (
+      new Date(startDateFromUrl).valueOf() !==
+        new Date(startDateValue).valueOf() ||
+      new Date(endDateFromUrl).valueOf() !== new Date(endDateValue).valueOf()
+    ) {
+      setDateRange([new Date(startDateFromUrl), new Date(endDateFromUrl)]);
+    }
+
+    if (shopId && shopIdFilter !== shopId) {
+      setShopIdFilter(shopId);
+    }
   }, [location.search]);
 
-  const handleChangeStartDate = (startDate) => {
-    const startTime = new Date(moment(startDate).startOf('minute')).getTime();
-    addParams({ startTime, page: 1 });
-    setFilter({
-      ...filter,
-      startDate,
-    });
+  const handleRefreshDateRange = () => {
+    const startDate = moment().startOf('month');
+    const endDate = moment().endOf('month');
+
+    addParams({ startDate, endDate });
+    setDateRange([startDate, endDate]);
   };
 
-  const handleChangeEndDate = (endDate) => {
-    const endTime = new Date(moment(endDate).endOf('minute')).getTime();
-    addParams({ endTime, page: 1 });
-    setFilter({
-      ...filter,
-      endDate,
-    });
+  const handleChangeDateRange = (dateValue) => {
+    const [startDate, endDate] = dateValue;
+    addParams({ startDate, endDate });
+    setDateRange(dateValue);
   };
 
-  const handleRefresh = () => {
-    history.replace({ search: '' });
-    setFilter({
-      startDate: moment().startOf('month'),
-      endDate: moment().endOf('month'),
-    });
+  const handleAcceptDateRange = (dateValue) => {
+    const [startDate, endDate] = dateValue;
+
+    addParams({ startDate, endDate });
+    setDateRange(dateValue);
   };
 
-  const handleChangeShop = (e) => {
+  const handleChangeShop = (e, shop) => {
     const shopId = e.target.value;
-    addParams({ shopId, page: 1 });
-    setFilter({ ...filter, shopId });
+    setShopSelect(shop);
+    if (!shop) {
+      removeParams('shopId');
+      return;
+    }
+    addParams({ shopId: shop.id });
+    setShopIdFilter(shopId);
   };
+
+  const filterOptions = createFilterOptions({
+    stringify: ({ name }) => name,
+  });
+
+  const handleSearchShop = () => {};
 
   const heads = [
     {
@@ -125,6 +137,7 @@ const Dashboard = () => {
 
   const getStatisticsRevenues = async (startTime, endTime) => {
     try {
+      setLoadingChartRevenue(true);
       const { status, results } = await apis.item.getStatisticsRevenue({
         startTime,
         endTime,
@@ -137,14 +150,16 @@ const Dashboard = () => {
         variant: 'error',
       });
     }
+    setLoadingChartRevenue(false);
   };
 
-  const getOverviewItems = async (startTime, endTime) => {
+  const getOverviewItems = async ({ startTime, endTime, shopId }) => {
     try {
       setLoadingOverview(true);
       const { status, results } = await apis.item.getOverviewItems({
         startTime,
         endTime,
+        shopId,
       });
       if (status === 1) {
         const OVERVIEW_MAPPING = {
@@ -200,25 +215,30 @@ const Dashboard = () => {
     setLoadingOverview(false);
   };
 
-  React.useEffect(() => {
-    const { startDate, endDate } = filter;
-    const startTime = moment(startDate).startOf('month').valueOf();
-    const endTime = moment(endDate).endOf('month').valueOf();
-
+  useEffect(() => {
     fetchListShops({
       pageSize: 100,
     });
+  }, []);
+
+  useEffect(() => {
+    const [startDate, endDate] = dateRange;
+    const startTime = moment(startDate).startOf('day').valueOf();
+    const endTime = moment(endDate).endOf('day').valueOf();
+
     fetchTopSellingProducts({
       startTime,
       endTime,
+      shopId: shopIdFilter,
     });
-    getOverviewItems(startTime, endTime);
+    getOverviewItems({ startTime, endTime, shopId: shopIdFilter });
     getStatisticsRevenues(startTime, endTime);
-  }, [filter, filter.shopId, filter.startDate, filter.endDate]);
+  }, [shopIdFilter, dateRange]);
 
   const handleStatisticsRevenue = () => {
-    const startTime = moment(dateMonth).startOf('month').valueOf();
-    const endTime = moment(dateMonth).endOf('month').valueOf();
+    const [startDate, endDate] = dateRange;
+    const startTime = moment(startDate).startOf('day').valueOf();
+    const endTime = moment(endDate).endOf('day').valueOf();
 
     const revenueDataObj = {};
     statisticsRevenueData.forEach(({ date, shopId, totalRevenue }) => {
@@ -252,10 +272,11 @@ const Dashboard = () => {
       if (revenueDataObj[day]) revenueShopsInDate = revenueDataObj[day];
 
       Object.keys(shopDataObj).forEach((shopId) => {
-        let value = 0;
-        if (revenueShopsInDate[shopId]) value = revenueShopsInDate[shopId];
+        let valueRevenue = 0;
+        if (revenueShopsInDate[shopId])
+          valueRevenue = revenueShopsInDate[shopId];
 
-        shopDataObj[shopId].data.push(value);
+        shopDataObj[shopId].data.push(valueRevenue);
       });
     }
 
@@ -269,6 +290,10 @@ const Dashboard = () => {
     if (listShops.length > 0) {
       handleStatisticsRevenue();
     }
+    if (shopIdFilter && listShops.length) {
+      const shop = listShops.find(({ id }) => id === shopIdFilter);
+      setShopSelect(shop);
+    }
   }, [listShops, statisticsRevenueData]);
 
   return (
@@ -280,32 +305,40 @@ const Dashboard = () => {
         justifyContent="flex-end"
       >
         <Box display="flex" alignItems="flex-end">
-          <TextField
+          <Autocomplete
             size="small"
+            disablePortal
+            id="combo-box-demo"
             className="text-field"
-            variant="outlined"
-            value={filter.shopId}
-            select
-            label="Shops"
+            options={listShops}
+            filterOptions={filterOptions}
+            noOptionsText="No Data"
+            value={shopSelect}
             onChange={handleChangeShop}
-          >
-            <StyledMenuItem value={ALL}>All Shops</StyledMenuItem>
-            {listShops.map((item) => (
-              <StyledMenuItem key={item.id} value={item.id}>
-                {item.name}
-              </StyledMenuItem>
-            ))}
-          </TextField>
+            getOptionLabel={(shop) => shop.name}
+            renderOption={(props, shop) => (
+              <Tooltip title={shop.name} placement="right">
+                <StyledMenuItem key={shop.id} value={shop} {...props}>
+                  {shop.name}
+                </StyledMenuItem>
+              </Tooltip>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Shop"
+                onChange={(event, value) => handleSearchShop(value)}
+              />
+            )}
+          />
         </Box>
         <Box display="flex" alignItems="flex-end">
-          <CustomDatePickerRange
-            type={DATE_TIME_PICKER_TYPES.DATE_TIME}
-            isRefresh
-            startDate={filter.startDate}
-            endDate={filter.endDate}
-            handleChangeStartDate={handleChangeStartDate}
-            handleChangeEndDate={handleChangeEndDate}
-            handleRefresh={handleRefresh}
+          <CustomDateRangePickerDay
+            dateRange={dateRange}
+            onChangeDateRange={handleChangeDateRange}
+            shouldShowRefreshButton
+            onRefreshDateRange={handleRefreshDateRange}
+            onAcceptDateRange={handleAcceptDateRange}
           />
         </Box>
       </Grid>
@@ -342,10 +375,16 @@ const Dashboard = () => {
         <Grid item xs={12} sm={12} md={6} lg={8}>
           <div className="revenue-order">
             <Typography className="text title">Revenue</Typography>
-            <StackedAreaChart
-              series={stackedChartSeries}
-              categories={stackedChartCategories}
-            />
+            {loadingChartRevenue ? (
+              <Box display="flex" justifyContent="center">
+                <CircularProgress color="primary" />
+              </Box>
+            ) : (
+              <StackedAreaChart
+                series={stackedChartSeries}
+                categories={stackedChartCategories}
+              />
+            )}
           </div>
         </Grid>
         <Grid item xs={12} sm={12} md={6} lg={4}>

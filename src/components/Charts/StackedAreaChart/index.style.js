@@ -58,4 +58,16 @@ export const StyledStackedAreaChart = styled('div')`
     font-weight: 500;
     margin-left: 8px;
   }
+  .chartContainer {
+    width: 100%;
+
+    .highcharts-container {
+      width: 100%;
+
+      .highcharts-root {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
 `;
