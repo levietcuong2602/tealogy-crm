@@ -7,13 +7,13 @@ const useCallApi = (initData, apiCaller, delayTime) => {
   const { enqueueSnackbar } = useSnackbar();
 
   const [data, setData] = useState(initData);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const handleCallApi = async (...args) => {
     try {
       setLoading(true);
       const response = await apiCaller(...args);
-      setData(response.result.data);
+      setData(response.results.data);
       if (delayTime) {
         await delay(delayTime);
       }
