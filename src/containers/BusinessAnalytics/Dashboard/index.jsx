@@ -101,14 +101,14 @@ const Dashboard = () => {
   };
 
   const handleChangeShop = (e, shop) => {
-    const shopId = e.target.value;
     setShopSelect(shop);
     if (!shop) {
       removeParams('shopId');
+      setShopIdFilter(null);
       return;
     }
     addParams({ shopId: shop.id });
-    setShopIdFilter(shopId);
+    setShopIdFilter(shop.id);
   };
 
   const filterOptions = createFilterOptions({
@@ -135,12 +135,13 @@ const Dashboard = () => {
     },
   ];
 
-  const getStatisticsRevenues = async (startTime, endTime) => {
+  const getStatisticsRevenues = async ({ startTime, endTime, shopId }) => {
     try {
       setLoadingChartRevenue(true);
       const { status, results } = await apis.item.getStatisticsRevenue({
         startTime,
         endTime,
+        shopId,
       });
       if (status === 1) {
         setStatisticsRevenueData(results);
@@ -232,7 +233,7 @@ const Dashboard = () => {
       shopId: shopIdFilter,
     });
     getOverviewItems({ startTime, endTime, shopId: shopIdFilter });
-    getStatisticsRevenues(startTime, endTime);
+    getStatisticsRevenues({ startTime, endTime, shopId: shopIdFilter });
   }, [shopIdFilter, dateRange]);
 
   const handleStatisticsRevenue = () => {
@@ -249,10 +250,19 @@ const Dashboard = () => {
 
     const shopDataObj = {};
     listShops.forEach(({ id, name }) => {
-      shopDataObj[id] = {
-        name,
-        data: [],
-      };
+      if (!shopIdFilter) {
+        shopDataObj[id] = {
+          name,
+          data: [],
+        };
+        return;
+      }
+      if (shopIdFilter === id) {
+        shopDataObj[id] = {
+          name,
+          data: [],
+        };
+      }
     });
 
     // Difference in number of days
